@@ -11,3 +11,4 @@ src/embedding_provider.py
 src/file_processor.py
 src/text_splitter.py
 src/vector_database.py
+tests/test_hello.py

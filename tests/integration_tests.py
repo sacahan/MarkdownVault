@@ -3,11 +3,15 @@
 """
 
 import os
+from dotenv import load_dotenv
 import pytest
 from unittest.mock import patch, MagicMock
 
 import tempfile
 import shutil
+
+# 載入 .env 設定（如果存在）
+load_dotenv()
 
 
 class MockEmbedding:

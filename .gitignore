@@ -39,7 +39,7 @@ Icon?
 *.swp
 
 # VS Code
-.vscode/
+# .vscode/
 
 # Jupyter
 .ipynb_checkpoints
