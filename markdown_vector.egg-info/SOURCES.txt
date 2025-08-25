@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+markdown_vector.egg-info/PKG-INFO
+markdown_vector.egg-info/SOURCES.txt
+markdown_vector.egg-info/dependency_links.txt
+markdown_vector.egg-info/requires.txt
+markdown_vector.egg-info/top_level.txt
+src/__init__.py
+src/embedding_provider.py
+src/file_processor.py
+src/text_splitter.py
+src/vector_database.py
