@@ -4,11 +4,7 @@
 
 import os
 from typing import List
-from dotenv import load_dotenv
 import openai
-
-# 載入環境變數
-load_dotenv()
 
 
 class EmbeddingProvider:
