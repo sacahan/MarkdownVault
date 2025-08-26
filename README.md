@@ -47,11 +47,41 @@ OPENAI_API_KEY=your_api_key_here
 
 1. Start the application
 
+ You can either run the Python module directly or use the included start script.
+
+ ```bash
+ # run with Python directly
+ python app.py
+
+ # or use the helper script (recommended)
+ ./scripts/start.sh
+ ```
+
+2. Open your browser and go to `http://localhost:7861` to use the Gradio interface
+
+### start script options
+
+The repository includes a helper script at `scripts/start.sh` which loads `.env` (if present) and starts the app. It supports the following environment variables and behaviors:
+
+- `HOST` / `GRADIO_HOST` (default `127.0.0.1`) — host to bind Gradio server to
+- `PORT` / `GRADIO_PORT` (default `7861`) — port to bind Gradio server to
+- `OPEN_BROWSER` (default `1`) — if set to `0` the script will not attempt to open the browser once the server is ready
+- `FORCE_KILL` (default `0`) — if set to `1` and the port is already in use, the script will attempt to terminate the process(es) listening on that port and then start the server
+
+Examples:
+
 ```bash
-python app.py
+# start normally
+./scripts/start.sh
+
+# start on a different port and do not open browser
+HOST=127.0.0.1 PORT=7777 OPEN_BROWSER=0 ./scripts/start.sh
+
+# force kill any process using the port, then start
+FORCE_KILL=1 ./scripts/start.sh
 ```
 
-2. Open your browser and go to `http://localhost:7860` to use the Gradio interface
+Security note: Do not commit real API keys to the repository. Use `.env` locally and keep it in `.gitignore`.
 
 ### Upload Files
 

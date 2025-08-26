@@ -450,15 +450,22 @@ def main():
         f"DEFAULT_CHUNK_SIZE={chunk_size}, DEFAULT_CHUNK_OVERLAP={chunk_overlap}, MODEL_NAME={model_name}, "
         f"MAX_FILE_SIZE_MB={max_file_size_mb}"
     )
-    print("伺服器啟動: http://127.0.0.1:7861")
+
+    # 由環境變數讀取 Gradio host/port（支援 HOST/PORT 或 GRADIO_HOST/GRADIO_PORT）
+    host = os.getenv("HOST", os.getenv("GRADIO_HOST", "127.0.0.1"))
+    port_str = os.getenv("PORT", os.getenv("GRADIO_PORT", "7861"))
+    try:
+        port = int(port_str)
+    except (TypeError, ValueError):
+        port = 7861
+
+    # print(f"伺服器啟動: http://{host}:{port}")
 
     # 建立 UI
     interface = create_ui(app)
 
-    # 啟動伺服器
-    interface.launch(
-        show_error=True, server_name="127.0.0.1", server_port=7861, quiet=True
-    )
+    # 啟動伺服器（server_name 為 host，server_port 為整數 port）
+    interface.launch(show_error=True, server_name=host, server_port=port, quiet=True)
 
 
 if __name__ == "__main__":
