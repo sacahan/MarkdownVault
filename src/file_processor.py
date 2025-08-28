@@ -4,6 +4,7 @@
 
 import os
 from typing import List, Optional, Tuple
+from .markdown_cleaner import MarkdownCleaner, CleaningStrategy
 
 
 class FileProcessor:
@@ -12,7 +13,13 @@ class FileProcessor:
     """
 
     def __init__(
-        self, allowed_extensions: List[str] = [".md"], max_file_size_mb: float = 5.0
+        self,
+        allowed_extensions: List[str] = [".md"],
+        max_file_size_mb: float = 5.0,
+        enable_markdown_cleaning: bool = True,
+        cleaning_strategy: str = "balanced",
+        preserve_code_blocks: bool = True,
+        preserve_headings_as_context: bool = True,
     ):
         """
         初始化檔案處理器
@@ -20,9 +27,29 @@ class FileProcessor:
         Args:
             allowed_extensions: 允許的副檔名列表
             max_file_size_mb: 單一檔案最大大小 (MB)
+            enable_markdown_cleaning: 是否啟用 Markdown 清理
+            cleaning_strategy: 清理策略 (conservative/balanced/aggressive)
+            preserve_code_blocks: 是否保留代碼塊內容
+            preserve_headings_as_context: 是否將標題轉換為上下文文字
         """
         self.allowed_extensions = allowed_extensions
         self.max_file_size_bytes = max_file_size_mb * 1024 * 1024
+        self.enable_markdown_cleaning = enable_markdown_cleaning
+
+        # 初始化 Markdown 清理器
+        if self.enable_markdown_cleaning:
+            try:
+                strategy_enum = CleaningStrategy(cleaning_strategy)
+            except ValueError:
+                strategy_enum = CleaningStrategy.BALANCED
+
+            self.markdown_cleaner = MarkdownCleaner(
+                strategy=strategy_enum,
+                preserve_code_blocks=preserve_code_blocks,
+                preserve_headings_as_context=preserve_headings_as_context,
+            )
+        else:
+            self.markdown_cleaner = None
 
     def validate_file(self, file_path: str, file_size: int) -> Tuple[bool, str]:
         """
@@ -65,7 +92,59 @@ class FileProcessor:
         """
         try:
             with open(file_path, "r", encoding="utf-8") as f:
-                return f.read()
+                content = f.read()
+
+            # 如果啟用 Markdown 清理，則處理內容
+            if self.enable_markdown_cleaning and self.markdown_cleaner:
+                content = self.markdown_cleaner.clean_content(content)
+
+            return content
         except Exception as e:
             print(f"讀取檔案時發生錯誤: {e}")
             return None
+
+    def process_markdown_content(self, content: str) -> str:
+        """
+        處理 Markdown 內容（可選的額外處理方法）
+
+        Args:
+            content: 原始 Markdown 內容
+
+        Returns:
+            str: 處理後的內容
+        """
+        if not content:
+            return content
+
+        if self.enable_markdown_cleaning and self.markdown_cleaner:
+            return self.markdown_cleaner.clean_content(content)
+        else:
+            return content
+
+    def get_cleaning_preview(self, content: str, max_length: int = 500) -> dict:
+        """
+        獲取清理預覽
+
+        Args:
+            content: 原始內容
+            max_length: 預覽最大長度
+
+        Returns:
+            dict: 預覽結果
+        """
+        if self.enable_markdown_cleaning and self.markdown_cleaner:
+            return self.markdown_cleaner.preview_cleaning(content, max_length)
+        else:
+            return {
+                "original_preview": content[:max_length]
+                + ("..." if len(content) > max_length else ""),
+                "cleaned_preview": content[:max_length]
+                + ("..." if len(content) > max_length else ""),
+                "stats": {
+                    "original_length": len(content),
+                    "cleaned_length": len(content),
+                    "reduction_ratio": 0,
+                    "original_lines": len(content.splitlines()),
+                    "cleaned_lines": len(content.splitlines()),
+                },
+            }

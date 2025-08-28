@@ -115,13 +115,18 @@ class VectorDatabase:
             return []
 
         for i in range(len(results["ids"][0])):
+            # ChromaDB 餘弦距離轉換為相似度分數 (0-1 範圍，1 表示完全相似)
+            distance = results["distances"][0][i]
+            # ChromaDB 餘弦距離範圍通常是 0-2，需要正確轉換為相似度
+            # 相似度 = (2 - distance) / 2，確保範圍在 0-1 之間
+            similarity = max(0.0, min(1.0, (2.0 - distance) / 2.0))
+
             formatted_results.append(
                 {
                     "id": results["ids"][0][i],
                     "text": results["documents"][0][i],
                     "metadata": results["metadatas"][0][i],
-                    "score": 1.0
-                    - min(results["distances"][0][i], 1.0),  # 轉換距離為相似度分數
+                    "score": similarity,
                 }
             )
 

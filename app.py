@@ -32,6 +32,10 @@ class MarkdownVectorApp:
         db_directory: str = "./chroma_db",
         collection_name: str = "markdown_documents",
         max_file_size_mb: float = 5.0,
+        enable_markdown_cleaning: bool = True,
+        cleaning_strategy: str = "balanced",
+        preserve_code_blocks: bool = True,
+        preserve_headings_as_context: bool = True,
     ):
         """
         初始化應用程式
@@ -43,15 +47,32 @@ class MarkdownVectorApp:
             db_directory: 資料庫目錄
             collection_name: 集合名稱
             max_file_size_mb: 單一檔案大小上限 (MB)
+            enable_markdown_cleaning: 是否啟用 Markdown 清理
+            cleaning_strategy: 清理策略
+            preserve_code_blocks: 是否保留代碼塊
+            preserve_headings_as_context: 是否保留標題作為上下文
         """
         # 初始化元件
         self.text_splitter = TextSplitter(chunk_size, chunk_overlap)
         self.embedding_provider = OpenAIEmbeddingProvider(model_name)
         self.vector_db = VectorDatabase(db_directory, collection_name)
-        self.file_processor = FileProcessor(max_file_size_mb=max_file_size_mb)
+        self.file_processor = FileProcessor(
+            max_file_size_mb=max_file_size_mb,
+            enable_markdown_cleaning=enable_markdown_cleaning,
+            cleaning_strategy=cleaning_strategy,
+            preserve_code_blocks=preserve_code_blocks,
+            preserve_headings_as_context=preserve_headings_as_context,
+        )
 
     def process_files(
-        self, files: List, chunk_size: int, chunk_overlap: int
+        self,
+        files: List,
+        chunk_size: int,
+        chunk_overlap: int,
+        enable_cleaning: bool = True,
+        cleaning_strategy: str = "balanced",
+        preserve_code: bool = True,
+        preserve_headings: bool = True,
     ) -> Dict[str, Any]:
         """
         處理上傳的檔案
@@ -60,6 +81,10 @@ class MarkdownVectorApp:
             files: 上傳的檔案列表
             chunk_size: 切分大小
             chunk_overlap: 切分重疊
+            enable_cleaning: 是否啟用 Markdown 清理
+            cleaning_strategy: 清理策略
+            preserve_code: 是否保留代碼塊
+            preserve_headings: 是否保留標題
 
         Returns:
             Dict: 處理結果
@@ -67,8 +92,17 @@ class MarkdownVectorApp:
         if not files:
             return {"status": "error", "message": "未提供檔案", "ingested_files": []}
 
-        # 更新切分器設定
+        # 更新切分器和文件處理器設定
         self.text_splitter = TextSplitter(chunk_size, chunk_overlap)
+
+        # 為此次處理創建新的文件處理器
+        temp_file_processor = FileProcessor(
+            max_file_size_mb=self.file_processor.max_file_size_bytes / (1024 * 1024),
+            enable_markdown_cleaning=enable_cleaning,
+            cleaning_strategy=cleaning_strategy,
+            preserve_code_blocks=preserve_code,
+            preserve_headings_as_context=preserve_headings,
+        )
 
         successful_files = []
         failed_files = []
@@ -81,15 +115,15 @@ class MarkdownVectorApp:
             file_name = os.path.basename(file_path)
 
             # 驗證檔案
-            is_valid, error_msg = self.file_processor.validate_file(
+            is_valid, error_msg = temp_file_processor.validate_file(
                 file_path, file_size
             )
             if not is_valid:
                 failed_files.append({"filename": file_name, "reason": error_msg})
                 continue
 
-            # 讀取檔案內容
-            content = self.file_processor.read_file_content(file_path)
+            # 讀取檔案內容（包含 Markdown 清理）
+            content = temp_file_processor.read_file_content(file_path)
             if content is None:
                 failed_files.append(
                     {"filename": file_name, "reason": "無法讀取檔案內容"}
@@ -197,6 +231,78 @@ class MarkdownVectorApp:
         else:
             return {"status": "error", "message": f"刪除文件時發生錯誤: {filename}"}
 
+    def preview_markdown_cleaning(
+        self,
+        files: List,
+        enable_cleaning: bool = True,
+        cleaning_strategy: str = "balanced",
+        preserve_code: bool = True,
+        preserve_headings: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        預覽 Markdown 清理效果
+
+        Args:
+            files: 檔案列表
+            enable_cleaning: 是否啟用清理
+            cleaning_strategy: 清理策略
+            preserve_code: 是否保留代碼塊
+            preserve_headings: 是否保留標題
+
+        Returns:
+            Dict: 預覽結果
+        """
+        if not files:
+            return {"status": "error", "message": "未提供檔案"}
+
+        # 只預覽第一個檔案
+        file = files[0]
+        file_path = file.name
+        file_name = os.path.basename(file_path)
+
+        try:
+            # 讀取原始內容
+            with open(file_path, "r", encoding="utf-8") as f:
+                original_content = f.read()
+
+            if enable_cleaning:
+                # 創建臨時處理器
+                temp_processor = FileProcessor(
+                    enable_markdown_cleaning=True,
+                    cleaning_strategy=cleaning_strategy,
+                    preserve_code_blocks=preserve_code,
+                    preserve_headings_as_context=preserve_headings,
+                )
+
+                # 獲取預覽
+                preview_result = temp_processor.get_cleaning_preview(
+                    original_content, max_length=800
+                )
+                preview_result["filename"] = file_name
+                preview_result["cleaning_enabled"] = True
+
+                return {
+                    "status": "success",
+                    "message": f"預覽檔案: {file_name}",
+                    "preview": preview_result,
+                }
+            else:
+                return {
+                    "status": "success",
+                    "message": f"預覽檔案: {file_name} (未啟用清理)",
+                    "preview": {
+                        "filename": file_name,
+                        "cleaning_enabled": False,
+                        "original_preview": original_content[:800]
+                        + ("..." if len(original_content) > 800 else ""),
+                        "cleaned_preview": "清理功能已停用",
+                        "stats": {"message": "清理功能已停用"},
+                    },
+                }
+
+        except Exception as e:
+            return {"status": "error", "message": f"讀取檔案時發生錯誤: {str(e)}"}
+
 
 def create_ui(app: MarkdownVectorApp):
     """
@@ -240,14 +346,75 @@ def create_ui(app: MarkdownVectorApp):
                                 value=DEFAULT_CHUNK_OVERLAP,
                                 step=50,
                             )
+
+                        # Markdown 預處理設定
+                        with gr.Accordion("Markdown 預處理設定", open=False):
+                            enable_cleaning = gr.Checkbox(
+                                label="啟用 Markdown 格式清理",
+                                value=True,
+                                info="移除 Markdown 格式符號以提升檢索精度",
+                            )
+                            cleaning_strategy = gr.Dropdown(
+                                label="清理策略",
+                                choices=["conservative", "balanced", "aggressive"],
+                                value="balanced",
+                                info="保守型保留更多格式，積極型清理更徹底",
+                            )
+                            with gr.Row():
+                                preserve_code = gr.Checkbox(
+                                    label="保留代碼塊內容", value=True
+                                )
+                                preserve_headings = gr.Checkbox(
+                                    label="保留標題作為上下文", value=True
+                                )
+
                         upload_button = gr.Button("上傳並處理")
+                        preview_button = gr.Button("預覽清理效果", variant="secondary")
                     with gr.Column():
                         upload_output = gr.JSON(label="處理結果")
+                        preview_output = gr.JSON(label="清理預覽", visible=False)
 
                 upload_button.click(
                     fn=app.process_files,
-                    inputs=[upload_files, chunk_size, chunk_overlap],
+                    inputs=[
+                        upload_files,
+                        chunk_size,
+                        chunk_overlap,
+                        enable_cleaning,
+                        cleaning_strategy,
+                        preserve_code,
+                        preserve_headings,
+                    ],
                     outputs=upload_output,
+                )
+
+                # 預覽清理效果事件處理
+                def handle_preview(
+                    files,
+                    enable_cleaning,
+                    cleaning_strategy,
+                    preserve_code,
+                    preserve_headings,
+                ):
+                    result = app.preview_markdown_cleaning(
+                        files,
+                        enable_cleaning,
+                        cleaning_strategy,
+                        preserve_code,
+                        preserve_headings,
+                    )
+                    return result, gr.update(visible=True)
+
+                preview_button.click(
+                    fn=handle_preview,
+                    inputs=[
+                        upload_files,
+                        enable_cleaning,
+                        cleaning_strategy,
+                        preserve_code,
+                        preserve_headings,
+                    ],
+                    outputs=[preview_output, preview_output],
                 )
 
             # 搜尋頁簽
@@ -288,6 +455,9 @@ def create_ui(app: MarkdownVectorApp):
                         ],
                         col_count=(6, "fixed"),
                         interactive=False,
+                        column_widths=[
+                            80,
+                        ],  # 設定每欄寬度（單位：像素）
                     )
 
                 # 將搜尋結果轉換為資料框格式
@@ -410,6 +580,20 @@ def main():
     except ValueError:
         max_file_size_mb = 5.0
 
+    # Markdown 預處理設定
+    markdown_cleaning_enabled = os.getenv(
+        "MARKDOWN_CLEANING_ENABLED", "true"
+    ).lower() in ("true", "1", "yes")
+    markdown_cleaning_strategy = os.getenv("MARKDOWN_CLEANING_STRATEGY", "balanced")
+    preserve_code_blocks = os.getenv("PRESERVE_CODE_BLOCKS", "true").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+    preserve_headings_as_context = os.getenv(
+        "PRESERVE_HEADINGS_AS_CONTEXT", "true"
+    ).lower() in ("true", "1", "yes")
+
     # 如果 env 指向的資料庫目錄不存在或沒有 chroma 資料，fallback 到 ./chroma_db（專案內預設位置）
     chosen_db_directory = db_directory
     try:
@@ -442,13 +626,18 @@ def main():
         db_directory=chosen_db_directory,
         collection_name=collection_name,
         max_file_size_mb=max_file_size_mb,
+        enable_markdown_cleaning=markdown_cleaning_enabled,
+        cleaning_strategy=markdown_cleaning_strategy,
+        preserve_code_blocks=preserve_code_blocks,
+        preserve_headings_as_context=preserve_headings_as_context,
     )
 
     # 顯示實際使用的設定（診斷用）
     print(
         f"Using config: CHROMA_DB_DIRECTORY={db_directory}, COLLECTION_NAME={collection_name}, "
         f"DEFAULT_CHUNK_SIZE={chunk_size}, DEFAULT_CHUNK_OVERLAP={chunk_overlap}, MODEL_NAME={model_name}, "
-        f"MAX_FILE_SIZE_MB={max_file_size_mb}"
+        f"MAX_FILE_SIZE_MB={max_file_size_mb}, MARKDOWN_CLEANING_ENABLED={markdown_cleaning_enabled}, "
+        f"MARKDOWN_CLEANING_STRATEGY={markdown_cleaning_strategy}"
     )
 
     # 由環境變數讀取 Gradio host/port（支援 HOST/PORT 或 GRADIO_HOST/GRADIO_PORT）

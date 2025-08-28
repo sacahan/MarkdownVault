@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_markdown_cleaner.py::TestMarkdownCleaner::test_basic_initialization -v)",
+      "Bash(python:*)",
+      "Bash(uv run:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
