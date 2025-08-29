@@ -655,7 +655,9 @@ def main():
     interface = create_ui(app)
 
     # 啟動伺服器（server_name 為 host，server_port 為整數 port）
-    interface.launch(show_error=True, server_name=host, server_port=port, quiet=True)
+    interface.launch(
+        show_error=True, server_name=host, server_port=port, share=False, debug=True
+    )
 
 
 if __name__ == "__main__":
