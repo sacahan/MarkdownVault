@@ -632,21 +632,22 @@ def main():
         preserve_headings_as_context=preserve_headings_as_context,
     )
 
-    # 顯示實際使用的設定（診斷用）
-    print(
-        f"Using config: CHROMA_DB_DIRECTORY={db_directory}, COLLECTION_NAME={collection_name}, "
-        f"DEFAULT_CHUNK_SIZE={chunk_size}, DEFAULT_CHUNK_OVERLAP={chunk_overlap}, MODEL_NAME={model_name}, "
-        f"MAX_FILE_SIZE_MB={max_file_size_mb}, MARKDOWN_CLEANING_ENABLED={markdown_cleaning_enabled}, "
-        f"MARKDOWN_CLEANING_STRATEGY={markdown_cleaning_strategy}"
-    )
-
-    # 由環境變數讀取 Gradio host/port（支援 HOST/PORT 或 GRADIO_HOST/GRADIO_PORT）
-    host = os.getenv("HOST", os.getenv("GRADIO_HOST", "127.0.0.1"))
-    port_str = os.getenv("PORT", os.getenv("GRADIO_PORT", "7861"))
+    # 由環境變數讀取 Gradio host/port
+    host = os.getenv("GRADIO_SERVER_NAME", os.getenv("HOST", "127.0.0.1"))
+    port_str = os.getenv("GRADIO_SERVER_PORT", os.getenv("PORT", "7860"))
     try:
         port = int(port_str)
     except (TypeError, ValueError):
-        port = 7861
+        port = 7860
+
+    # 顯示實際使用的設定（診斷用）
+    print(
+        f"Using config: CHROMA_DB_DIRECTORY={chosen_db_directory}, COLLECTION_NAME={collection_name}, "
+        f"DEFAULT_CHUNK_SIZE={chunk_size}, DEFAULT_CHUNK_OVERLAP={chunk_overlap}, MODEL_NAME={model_name}, "
+        f"MAX_FILE_SIZE_MB={max_file_size_mb}, MARKDOWN_CLEANING_ENABLED={markdown_cleaning_enabled}, "
+        f"MARKDOWN_CLEANING_STRATEGY={markdown_cleaning_strategy}, "
+        f"GRADIO_SERVER_NAME={host}, GRADIO_SERVER_PORT={port_str}"
+    )
 
     # print(f"伺服器啟動: http://{host}:{port}")
 

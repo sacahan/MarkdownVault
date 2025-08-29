@@ -8,9 +8,9 @@ version = "0.1.0"
 description = "Markdown 文件向量化服務"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = { text = "MIT" }
 dependencies = [
-    "gradio>=3.50.2",
+    "gradio>=5.44.1,<6.0.0",
     "chromadb>=0.4.18",
     "openai>=1.5.0",
     "python-dotenv>=1.0.0",
@@ -20,10 +20,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-mock>=3.11.1",
-]
+dev = ["pytest>=7.4.0", "pytest-mock>=3.11.1"]
 
 [tool.setuptools]
 packages = ["src"]

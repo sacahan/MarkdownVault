@@ -168,3 +168,12 @@ PRESERVE_CODE_BLOCKS=true
 - Unit tests: `tests/test_markdown_cleaner.py`
 - Integration tests: `tests/test_integration_markdown_cleaning.py`
 - Quality evaluation: Run `python evaluate_quality.py`
+
+## Important Instructions Reminders
+
+- 每次完成重構後應該回頭檢視 README.md 是否也需要相應更新內容
+- 如果要執行與python相關的程式優先考慮使用"uv run"，或透過"uv init"建立虛擬環境，或使用"uv add"增加依賴包
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless they're absolutely necessary for achieving your goal
+- ALWAYS prefer editing an existing file to creating a new one
+- NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User
