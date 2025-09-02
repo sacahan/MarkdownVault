@@ -7,31 +7,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Development Environment
 
 ```bash
-# Install dependencies
+# Install dependencies (pip method)
 pip install -e .
 
-# Install with development dependencies
+# Install with development dependencies (pip method)
 pip install -e ".[dev]"
+
+# Using uv (recommended)
+uv sync                     # Install dependencies
+uv sync --dev              # Install with dev dependencies
+uv run app.py              # Run application
+uv run python app.py       # Alternative run command
 
 # Start application (recommended method)
 ./scripts/start.sh
 
 # Start application directly
 python app.py
-
-# Using uv (if available)
-uv run app.py
 ```
 
 ### Testing commands
 
 ```bash
-# Run unit tests
+# Run all tests
 pytest
+
+# Using uv
+uv run pytest
 
 # Run specific test files
 pytest tests/tests.py
 pytest tests/integration_tests.py
+pytest tests/test_markdown_cleaner.py
+pytest tests/test_integration_markdown_cleaning.py
+
+# Run quality evaluation
+python evaluate_quality.py
+uv run python evaluate_quality.py
 ```
 
 ### Code Quality
@@ -56,6 +68,13 @@ The `scripts/start.sh` script supports configuration via environment variables:
 - `OPEN_BROWSER` (default: 0) - set to 1 to open browser automatically
 - `FORCE_KILL` (default: 0) - set to 1 to kill existing processes on port
 - `BACKGROUND` (default: 0) - set to 1 to run in background
+
+### Deployment
+
+```bash
+# Deploy to Hugging Face Spaces
+./scripts/deploy.sh
+```
 
 ## Architecture
 

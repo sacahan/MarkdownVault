@@ -1,73 +1,39 @@
 """
-嵌入器模組 - 將文字轉換為向量表示
+嵌入模型提供者模組
 """
 
 import os
 from typing import List
-import openai
+from openai import OpenAI
+from sentence_transformers import SentenceTransformer
 
 
-class EmbeddingProvider:
+class OpenAIEmbeddingProvider:
     """
-    嵌入模型提供者的基礎類別，定義基本介面
-    """
-
-    def embed_texts(self, texts: List[str]) -> List[List[float]]:
-        """
-        將文字列表轉換為向量表示
-
-        Args:
-            texts: 要嵌入的文字列表
-
-        Returns:
-            List[List[float]]: 嵌入向量列表
-        """
-        raise NotImplementedError("子類必須實作此方法")
-
-
-class OpenAIEmbeddingProvider(EmbeddingProvider):
-    """
-    使用 OpenAI API 的嵌入提供者
+    使用 OpenAI 的模型來產生嵌入
     """
 
-    def __init__(
-        self, model_name: str = "text-embedding-3-small", batch_size: int = 1000
-    ):
+    def __init__(self, model_name: str = "text-embedding-3-small"):
         """
         初始化 OpenAI 嵌入提供者
 
         Args:
-            model_name: 使用的 OpenAI 嵌入模型名稱
-            batch_size: 每批處理的最大文本數量
+            model_name: 要使用的模型名稱
         """
-        super().__init__()
-        self.model_name = model_name
-        self.batch_size = batch_size
-
-        # 初始化 OpenAI 客戶端
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("未設定 OPENAI_API_KEY 環境變數")
 
-        self.client = openai.OpenAI(api_key=api_key)
-
-    def _create_embedding_batch(self, texts: List[str]) -> List[List[float]]:
-        """
-        為一批文字建立嵌入
-        """
-        try:
-            response = self.client.embeddings.create(model=self.model_name, input=texts)
-            return [item.embedding for item in response.data]
-        except Exception as e:
-            print(f"嵌入批次時發生錯誤: {e}")
-            raise
+        self.client = OpenAI(api_key=api_key)
+        self.model_name = model_name
+        self.model_identifier = "openai"
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """
-        將文字列表轉換為向量表示，處理批次限制
+        將多個文字轉換為嵌入向量
 
         Args:
-            texts: 要嵌入的文字列表
+            texts: 要轉換的文字列表
 
         Returns:
             List[List[float]]: 嵌入向量列表
@@ -75,12 +41,53 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         if not texts:
             return []
 
-        all_embeddings = []
+        try:
+            # 將輸入中的換行符替換為空格，OpenAI 建議這樣做
+            texts = [text.replace("\n", " ") for text in texts]
 
-        # 分批處理文字
-        for i in range(0, len(texts), self.batch_size):
-            batch = texts[i : i + self.batch_size]
-            batch_embeddings = self._create_embedding_batch(batch)
-            all_embeddings.extend(batch_embeddings)
+            response = self.client.embeddings.create(input=texts, model=self.model_name)
 
-        return all_embeddings
+            # 提取嵌入向量
+            embeddings = [item.embedding for item in response.data]
+            return embeddings
+        except Exception as e:
+            print(f"產生嵌入時發生錯誤: {e}")
+            raise
+
+
+class SentenceTransformerEmbeddingProvider:
+    """
+    使用 SentenceTransformer 的本地模型來產生嵌入
+    """
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        """
+        初始化 SentenceTransformer 嵌入提供者
+
+        Args:
+            model_name: 要使用的模型名稱
+        """
+        self.model = SentenceTransformer(model_name)
+        self.model_identifier = "minilm"
+
+    def embed_texts(self, texts: List[str]) -> List[List[float]]:
+        """
+        將多個文字轉換為嵌入向量
+
+        Args:
+            texts: 要轉換的文字列表
+
+        Returns:
+            List[List[float]]: 嵌入向量列表
+        """
+        if not texts:
+            return []
+
+        try:
+            # SentenceTransformer 可以直接處理換行符
+            embeddings = self.model.encode(texts, convert_to_tensor=False)
+            # 將 numpy array 轉換為 list
+            return [emb.tolist() for emb in embeddings]
+        except Exception as e:
+            print(f"產生嵌入時發生錯誤: {e}")
+            raise
