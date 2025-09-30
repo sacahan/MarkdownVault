@@ -1,13 +1,4 @@
 {
   "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Gradio 偵錯",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "app",
-      "console": "integratedTerminal",
-      "envFile": "${workspaceFolder}/.env"
-    },
-  ]
+  "configurations": []
 }
